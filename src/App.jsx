@@ -2,19 +2,19 @@ import React, { useState, useEffect } from "react";
 
 const API_URL = "https://script.google.com/macros/s/AKfycbzgTXIHhPWgCCDCYOiWfywCYT0mU6Ix-XC9y9qd1s7RunEKIwh45ZFEKRFged2ZMOZ2/exec";
 
-export default function App() {
+export default function PlanningApp() {
   const [planning, setPlanning] = useState([]);
   const [filterMedewerker, setFilterMedewerker] = useState("");
   const [statusMsg, setStatusMsg] = useState("");
 
-  // Fetch planning data
+  // Ophalen van planning
   useEffect(() => {
     async function fetchPlanning() {
       try {
         const resp = await fetch(API_URL);
         const result = await resp.json();
-        if (result.success && result.planning) {
-          setPlanning(result.planning);
+        if (result.success && result.alleWerkbonnen) {
+          setPlanning(result.alleWerkbonnen);
         }
       } catch (err) {
         console.error(err);
@@ -38,7 +38,6 @@ export default function App() {
   }
 
   function handleOpenWerkbon(werkbonnummer) {
-    // Vervang dit door de juiste werkbon URL en werkbonnummer
     const WORKBON_URL = `https://thriving-lily-981fb3.netlify.app/?werkbon=${werkbonnummer}`;
     window.open(WORKBON_URL, "_blank");
   }
@@ -55,18 +54,20 @@ export default function App() {
       {statusMsg && <p>{statusMsg}</p>}
 
       <div style={{ display: "grid", gap: "16px", marginTop: "20px" }}>
-        {filteredPlanning().map((item) => (
-          <div key={item.id} style={{
+        {filteredPlanning().map((item, index) => (
+          <div key={index} style={{
             border: "1px solid #ccc",
             borderRadius: "8px",
             padding: "12px",
-            backgroundColor: item.status === "Bezet" ? "#fde68a" : "#d1fae5"
+            backgroundColor: item.handlingen.includes("Bezet") ? "#fde68a" : "#d1fae5"
           }}>
-            <p><strong>Datum:</strong> {item.datum}</p>
+            <p><strong>Datum:</strong> {new Date(item.datum).toLocaleDateString()}</p>
             <p><strong>Werkbon:</strong> {item.werkbonnummer}</p>
             <p><strong>Opdrachtgever:</strong> {item.opdrachtgever}</p>
-            <p><strong>Medewerkers:</strong> {item.medewerker1} {item.medewerker2 && `, ${item.medewerker2}`}</p>
+            <p><strong>Medewerkers:</strong> {item.medewerker1}{item.medewerker2 ? `, ${item.medewerker2}` : ""}</p>
             <p><strong>Start/Eind:</strong> {item.starttijd} - {item.eindtijd}</p>
+            <p><strong>Uren:</strong> {item.uren}</p>
+            <p><strong>Handelingen:</strong> {item.handelingen}</p>
 
             <button
               style={{
