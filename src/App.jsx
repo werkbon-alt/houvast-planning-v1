@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const API_URL =
   "https://script.google.com/macros/s/AKfycbzgTXIHhPWgCCDCYOiWfywCYT0mU6Ix-XC9y9qd1s7RunEKIwh45ZFEKRFged2ZMOZ2/exec";
@@ -18,10 +18,34 @@ const medewerkers = [
   "Externe/inhuur",
 ];
 
+const emptyForm = {
+  datum: "",
+  tijd: "",
+  opdrachtgever: "",
+  locatie: "",
+  medewerker1: "",
+  medewerker2: "",
+  status: "Gepland",
+  opmerkingen: "",
+};
+
 export default function App() {
   const [planning, setPlanning] = useState([]);
+  const [formData, setFormData] = useState(emptyForm);
+  const [editingId, setEditingId] = useState("");
+  const [medewerkerFilter, setMedewerkerFilter] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const filteredPlanning = useMemo(() => {
+    if (!medewerkerFilter) return planning;
+
+    return planning.filter(
+      (item) =>
+        item.medewerker1 === medewerkerFilter ||
+        item.medewerker2 === medewerkerFilter
+    );
+  }, [planning, medewerkerFilter]);
 
   async function loadPlanning() {
     try {
@@ -37,15 +61,55 @@ export default function App() {
     loadPlanning();
   }, []);
 
+  function handleChange(event) {
+    const { name, value } = event.target;
+
+    setFormData((current) => ({
+      ...current,
+      [name]: value,
+    }));
+  }
+
+  function handleEdit(item) {
+    setEditingId(item.id);
+
+    setFormData({
+      datum: toInputDate(item.datum),
+      tijd: formatTime(item.tijd),
+      opdrachtgever: item.opdrachtgever || "",
+      locatie: item.locatie || "",
+      medewerker1: item.medewerker1 || "",
+      medewerker2: item.medewerker2 || "",
+      status: item.status || "Gepland",
+      opmerkingen: item.opmerkingen || "",
+    });
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    setEditingId("");
+    setFormData(emptyForm);
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
 
-    const form = e.target;
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
-
     setLoading(true);
-    setStatus("Planning wordt opgeslagen...");
+    setStatus(editingId ? "Wijziging wordt opgeslagen..." : "Planning wordt opgeslagen...");
+
+    const payload = {
+      type: editingId ? "updatePlanning" : "planning",
+      id: editingId,
+      datum: formData.datum,
+      tijd: formData.tijd,
+      opdrachtgever: formData.opdrachtgever,
+      locatie: formData.locatie,
+      medewerker1: formData.medewerker1,
+      medewerker2: formData.medewerker2,
+      status: formData.status || "Gepland",
+      opmerkingen: formData.opmerkingen,
+    };
 
     try {
       await fetch(API_URL, {
@@ -54,21 +118,11 @@ export default function App() {
         headers: {
           "Content-Type": "text/plain;charset=utf-8",
         },
-        body: JSON.stringify({
-          type: "planning",
-          datum: data.datum,
-          tijd: data.tijd,
-          opdrachtgever: data.opdrachtgever,
-          locatie: data.locatie,
-          medewerker1: data.medewerker1,
-          medewerker2: data.medewerker2,
-          status: data.status || "Gepland",
-          opmerkingen: data.opmerkingen,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      setStatus("Planning opgeslagen.");
-      form.reset();
+      setStatus(editingId ? "Planning gewijzigd." : "Planning opgeslagen.");
+      resetForm();
 
       setTimeout(() => {
         loadPlanning();
@@ -88,28 +142,60 @@ export default function App() {
         <div>
           <p className="eyebrow">Houvast Postmortale Zorg</p>
           <h1>Planning</h1>
-          <p>Nieuwe opdrachten plannen en overzicht houden.</p>
+          <p>Nieuwe opdrachten plannen, wijzigen en overzicht houden.</p>
         </div>
       </section>
 
       <section className="layout">
         <form className="card" onSubmit={handleSubmit}>
-          <h2>Nieuwe planning toevoegen</h2>
+          <div className="form-title-row">
+            <h2>{editingId ? "Planning wijzigen" : "Nieuwe planning toevoegen"}</h2>
+            {editingId && <span className="edit-id">{editingId}</span>}
+          </div>
 
           <label>Datum</label>
-          <input name="datum" type="date" required />
+          <input
+            name="datum"
+            type="date"
+            value={formData.datum}
+            onChange={handleChange}
+            required
+          />
 
           <label>Tijd</label>
-          <input name="tijd" type="text" placeholder="Bijv. 09:30" required />
+          <input
+            name="tijd"
+            type="text"
+            placeholder="Bijv. 09:30"
+            value={formData.tijd}
+            onChange={handleChange}
+            required
+          />
 
           <label>Opdrachtgever</label>
-          <input name="opdrachtgever" placeholder="Bijv. Walpot" required />
+          <input
+            name="opdrachtgever"
+            placeholder="Bijv. Walpot"
+            value={formData.opdrachtgever}
+            onChange={handleChange}
+            required
+          />
 
           <label>Locatie</label>
-          <input name="locatie" placeholder="Plaats of adres" />
+          <input
+            name="locatie"
+            placeholder="Plaats of adres"
+            value={formData.locatie}
+            onChange={handleChange}
+          />
 
           <label>Medewerker 1</label>
-          <select name="medewerker1" required defaultValue="">
+          <select
+            name="medewerker1"
+            value={formData.medewerker1}
+            onChange={handleChange}
+            required
+          >
             <option value="" disabled>
               Kies medewerker
             </option>
@@ -121,7 +207,11 @@ export default function App() {
           </select>
 
           <label>Medewerker 2</label>
-          <select name="medewerker2" defaultValue="">
+          <select
+            name="medewerker2"
+            value={formData.medewerker2}
+            onChange={handleChange}
+          >
             <option value="">Geen tweede medewerker</option>
             {medewerkers.map((naam) => (
               <option key={naam} value={naam}>
@@ -131,18 +221,37 @@ export default function App() {
           </select>
 
           <label>Status</label>
-          <select name="status" defaultValue="Gepland">
+          <select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+          >
             <option value="Gepland">Gepland</option>
             <option value="Uitgevoerd">Uitgevoerd</option>
             <option value="Vervallen">Vervallen</option>
           </select>
 
           <label>Opmerkingen</label>
-          <textarea name="opmerkingen" placeholder="Aanvullende informatie" />
+          <textarea
+            name="opmerkingen"
+            placeholder="Aanvullende informatie"
+            value={formData.opmerkingen}
+            onChange={handleChange}
+          />
 
           <button type="submit" disabled={loading}>
-            {loading ? "Opslaan..." : "Planning opslaan"}
+            {loading
+              ? "Opslaan..."
+              : editingId
+              ? "Wijziging opslaan"
+              : "Planning opslaan"}
           </button>
+
+          {editingId && (
+            <button type="button" className="cancel-button" onClick={resetForm}>
+              Annuleren
+            </button>
+          )}
 
           {status && <p className="status">{status}</p>}
         </form>
@@ -150,29 +259,42 @@ export default function App() {
         <section className="card">
           <div className="header-row">
             <h2>Planningsoverzicht</h2>
+
+            <select
+              value={medewerkerFilter}
+              onChange={(event) => setMedewerkerFilter(event.target.value)}
+              className="filter-select"
+            >
+              <option value="">Alle medewerkers</option>
+              {medewerkers.map((naam) => (
+                <option key={naam} value={naam}>
+                  {naam}
+                </option>
+              ))}
+            </select>
+
             <button type="button" onClick={loadPlanning}>
               Verversen
             </button>
           </div>
 
-          {planning.length === 0 ? (
-            <p className="muted">Er staan nog geen geplande opdrachten.</p>
+          {filteredPlanning.length === 0 ? (
+            <p className="muted">Er staan geen geplande opdrachten voor deze selectie.</p>
           ) : (
             <div className="planning-list">
-              {planning.map((item) => (
+              {filteredPlanning.map((item) => (
                 <article className="planning-item" key={item.id}>
                   <div className="planning-top">
-                   <div>
-  <strong>
-    {formatDate(item.datum)} om {formatTime(item.tijd)}
-  </strong>
-  <div style={{ fontSize: "12px", color: "#666" }}>
-    {item.id}
-  </div>
-</div> 
-<span className={`badge ${String(item.status || "Gepland").toLowerCase()}`}>
-  {item.status || "Gepland"}
-</span>
+                    <div>
+                      <strong>
+                        {formatDate(item.datum)} om {formatTime(item.tijd)}
+                      </strong>
+                      <div className="planning-id">{item.id}</div>
+                    </div>
+
+                    <span className={`badge ${String(item.status || "Gepland").toLowerCase()}`}>
+                      {item.status || "Gepland"}
+                    </span>
                   </div>
 
                   <p><b>Opdrachtgever:</b> {item.opdrachtgever || "-"}</p>
@@ -185,18 +307,14 @@ export default function App() {
                   {item.opmerkingen && (
                     <p><b>Opmerkingen:</b> {item.opmerkingen}</p>
                   )}
+
                   <button
-  type="button"
-  style={{
-    marginTop: "10px",
-    background: "#2563eb"
-  }}
-  onClick={() => {
-    alert(`Bewerken van ${item.id} komt in v1.1`);
-  }}
->
-  ✏️ Bewerken
-</button>
+                    type="button"
+                    className="edit-button"
+                    onClick={() => handleEdit(item)}
+                  >
+                    Bewerken
+                  </button>
                 </article>
               ))}
             </div>
@@ -205,6 +323,15 @@ export default function App() {
       </section>
     </main>
   );
+}
+
+function toInputDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toISOString().slice(0, 10);
 }
 
 function formatDate(value) {
@@ -276,6 +403,22 @@ const styles = `
     box-shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
   }
 
+  .form-title-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .edit-id {
+    background: #eef2ff;
+    color: #3730a3;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 13px;
+    font-weight: bold;
+  }
+
   label {
     display: block;
     margin-top: 16px;
@@ -311,6 +454,11 @@ const styles = `
     padding: 18px;
   }
 
+  .cancel-button {
+    background: #6b7280;
+    margin-top: 12px;
+  }
+
   .status {
     background: #d1fae5;
     color: #065f46;
@@ -326,6 +474,10 @@ const styles = `
     gap: 12px;
     align-items: center;
     flex-wrap: wrap;
+  }
+
+  .filter-select {
+    max-width: 240px;
   }
 
   .muted {
@@ -353,11 +505,22 @@ const styles = `
     margin-bottom: 14px;
   }
 
+  .planning-id {
+    font-size: 12px;
+    color: #666;
+    margin-top: 4px;
+  }
+
   .badge {
     padding: 7px 12px;
     border-radius: 999px;
     font-size: 13px;
     font-weight: bold;
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .badge.gepland {
     background: #dbeafe;
     color: #1e40af;
   }
@@ -372,6 +535,11 @@ const styles = `
     color: #991b1b;
   }
 
+  .edit-button {
+    margin-top: 12px;
+    background: #2563eb;
+  }
+
   @media (max-width: 850px) {
     .layout {
       grid-template-columns: 1fr;
@@ -380,6 +548,15 @@ const styles = `
 
     .card {
       padding: 24px;
+    }
+
+    .planning-top {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .filter-select {
+      max-width: 100%;
     }
   }
 `;
