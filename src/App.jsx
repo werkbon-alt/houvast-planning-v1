@@ -162,7 +162,14 @@ export default function App() {
               {planning.map((item) => (
                 <article className="planning-item" key={item.id}>
                   <div className="planning-top">
-                    <strong>{formatDate(item.datum)} om {formatTime(item.tijd)}</strong>
+                   <div>
+  <strong>
+    {formatDate(item.datum)} om {formatTime(item.tijd)}
+  </strong>
+  <div style={{ fontSize: "12px", color: "#666" }}>
+    {item.id}
+  </div>
+</div> 
 <span className={`badge ${String(item.status || "Gepland").toLowerCase()}`}>
   {item.status || "Gepland"}
 </span>
