@@ -185,6 +185,18 @@ export default function App() {
                   {item.opmerkingen && (
                     <p><b>Opmerkingen:</b> {item.opmerkingen}</p>
                   )}
+                  <button
+  type="button"
+  style={{
+    marginTop: "10px",
+    background: "#2563eb"
+  }}
+  onClick={() => {
+    alert(`Bewerken van ${item.id} komt in v1.1`);
+  }}
+>
+  ✏️ Bewerken
+</button>
                 </article>
               ))}
             </div>
