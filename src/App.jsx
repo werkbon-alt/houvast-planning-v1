@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 const API_URL =
   "https://script.google.com/macros/s/AKfycbzgTXIHhPWgCCDCYOiWfywCYT0mU6Ix-XC9y9qd1s7RunEKIwh45ZFEKRFged2ZMOZ2/exec";
-
+const WERKBON_URL = "https://thriving-lily-981fb3.netlify.app/";
 const medewerkers = [
   "Nicky",
   "Roland",
@@ -308,13 +308,40 @@ export default function App() {
                     <p><b>Opmerkingen:</b> {item.opmerkingen}</p>
                   )}
 
-                  <button
-                    type="button"
-                    className="edit-button"
-                    onClick={() => handleEdit(item)}
-                  >
-                    Bewerken
-                  </button>
+<div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+  <button
+    type="button"
+    className="edit-button"
+    .workbon-button {
+  background: #16a34a;
+}
+    onClick={() => handleEdit(item)}
+  >
+    Bewerken
+  </button>
+
+  <button
+    type="button"
+    className="workbon-button"
+    onClick={() => {
+      const params = new URLSearchParams({
+        datum: toInputDate(item.datum),
+        opdrachtgever: item.opdrachtgever || "",
+        medewerker1: item.medewerker1 || "",
+        medewerker2: item.medewerker2 || "",
+        locatie: item.locatie || "",
+        planningId: item.id || "",
+      });
+
+      window.open(
+        `${WERKBON_URL}?${params.toString()}`,
+        "_blank"
+      );
+    }}
+  >
+    Werkbon starten
+  </button>
+</div>
                 </article>
               ))}
             </div>
