@@ -1,589 +1,182 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 
 const API_URL =
   "https://script.google.com/macros/s/AKfycbzgTXIHhPWgCCDCYOiWfywCYT0mU6Ix-XC9y9qd1s7RunEKIwh45ZFEKRFged2ZMOZ2/exec";
-const WERKBON_URL = "https://thriving-lily-981fb3.netlify.app/";
-const medewerkers = [
-  "Nicky",
-  "Roland",
-  "Cindy",
-  "Cécile",
-  "Mike",
-  "Nelleke",
-  "Dylano",
-  "Gerald",
-  "Marc",
-  "Angélique",
-  "Bianca",
-  "Externe/inhuur",
-];
+const WERKBON_URL =
+  "https://thriving-lily-981fb3.netlify.app/";
 
-const emptyForm = {
-  datum: "",
-  tijd: "",
-  opdrachtgever: "",
-  locatie: "",
-  medewerker1: "",
-  medewerker2: "",
-  status: "Gepland",
-  opmerkingen: "",
-};
+function toInputDate(dateStr) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export default function App() {
-  const [planning, setPlanning] = useState([]);
-  const [formData, setFormData] = useState(emptyForm);
-  const [editingId, setEditingId] = useState("");
-  const [medewerkerFilter, setMedewerkerFilter] = useState("");
-  const [status, setStatus] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [planning, setPlanning] = useState([
+    {
+      id: "1",
+      datum: "2026-06-15",
+      opdrachtgever: "Walpot",
+      medewerker1: "Marc",
+      medewerker2: "Nicky",
+      locatie: "Ulestraten",
+      status: "Open",
+    },
+    {
+      id: "2",
+      datum: "2026-06-16",
+      opdrachtgever: "Sassen Dielemans",
+      medewerker1: "Nelleke",
+      medewerker2: "",
+      locatie: "Sassen",
+      status: "Uitgevoerd",
+    },
+  ]);
 
-  const filteredPlanning = useMemo(() => {
-    if (!medewerkerFilter) return planning;
+  const [filterMedewerker, setFilterMedewerker] = useState("");
 
-    return planning.filter(
-      (item) =>
-        item.medewerker1 === medewerkerFilter ||
-        item.medewerker2 === medewerkerFilter
-    );
-  }, [planning, medewerkerFilter]);
+  const handleEdit = (item) => {
+    alert(`Planning bewerken: ${item.id}`);
+  };
 
-  async function loadPlanning() {
-    try {
-      const response = await fetch(`${API_URL}?action=planning`);
-      const data = await response.json();
-      setPlanning(data.planning || []);
-    } catch {
-      setStatus("Planning kon niet worden geladen.");
+  const filteredPlanning = filterMedewerker
+    ? planning.filter(
+        (p) =>
+          p.medewerker1 === filterMedewerker ||
+          p.medewerker2 === filterMedewerker
+      )
+    : planning;
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Uitgevoerd":
+        return "#16a34a"; // groen
+      case "Open":
+        return "#f59e0b"; // oranje
+      case "Gepland":
+        return "#3b82f6"; // blauw
+      default:
+        return "#d1d5db"; // grijs
     }
-  }
-
-  useEffect(() => {
-    loadPlanning();
-  }, []);
-
-  function handleChange(event) {
-    const { name, value } = event.target;
-
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }
-
-  function handleEdit(item) {
-    setEditingId(item.id);
-
-    setFormData({
-      datum: toInputDate(item.datum),
-      tijd: formatTime(item.tijd),
-      opdrachtgever: item.opdrachtgever || "",
-      locatie: item.locatie || "",
-      medewerker1: item.medewerker1 || "",
-      medewerker2: item.medewerker2 || "",
-      status: item.status || "Gepland",
-      opmerkingen: item.opmerkingen || "",
-    });
-
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-
-  function resetForm() {
-    setEditingId("");
-    setFormData(emptyForm);
-  }
-
-  async function handleSubmit(e) {
-    e.preventDefault();
-
-    setLoading(true);
-    setStatus(editingId ? "Wijziging wordt opgeslagen..." : "Planning wordt opgeslagen...");
-
-    const payload = {
-      type: editingId ? "updatePlanning" : "planning",
-      id: editingId,
-      datum: formData.datum,
-      tijd: formData.tijd,
-      opdrachtgever: formData.opdrachtgever,
-      locatie: formData.locatie,
-      medewerker1: formData.medewerker1,
-      medewerker2: formData.medewerker2,
-      status: formData.status || "Gepland",
-      opmerkingen: formData.opmerkingen,
-    };
-
-    try {
-      await fetch(API_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: {
-          "Content-Type": "text/plain;charset=utf-8",
-        },
-        body: JSON.stringify(payload),
-      });
-
-      setStatus(editingId ? "Planning gewijzigd." : "Planning opgeslagen.");
-      resetForm();
-
-      setTimeout(() => {
-        loadPlanning();
-      }, 1000);
-    } catch {
-      setStatus("Opslaan mislukt.");
-    } finally {
-      setLoading(false);
-    }
-  }
+  };
 
   return (
-    <main>
-      <style>{styles}</style>
+    <main style={pageStyle}>
+      <h1>Houvast Planning v1.2</h1>
 
-      <section className="hero">
-        <div>
-          <p className="eyebrow">Houvast Postmortale Zorg</p>
-          <h1>Planning</h1>
-          <p>Nieuwe opdrachten plannen, wijzigen en overzicht houden.</p>
-        </div>
-      </section>
+      <label style={{ fontWeight: "bold" }}>Filter op medewerker:</label>
+      <select
+        value={filterMedewerker}
+        onChange={(e) => setFilterMedewerker(e.target.value)}
+        style={filterStyle}
+      >
+        <option value="">Alle medewerkers</option>
+        <option value="Nicky">Nicky</option>
+        <option value="Roland">Roland</option>
+        <option value="Cindy">Cindy</option>
+        <option value="Cécile">Cécile</option>
+        <option value="Mike">Mike</option>
+        <option value="Nelleke">Nelleke</option>
+        <option value="Dylano">Dylano</option>
+        <option value="Gerald">Gerald</option>
+        <option value="Marc">Marc</option>
+        <option value="Angélique">Angélique</option>
+        <option value="Bianca">Bianca</option>
+        <option value="Externe/inhuur">Externe/inhuur</option>
+      </select>
 
-      <section className="layout">
-        <form className="card" onSubmit={handleSubmit}>
-          <div className="form-title-row">
-            <h2>{editingId ? "Planning wijzigen" : "Nieuwe planning toevoegen"}</h2>
-            {editingId && <span className="edit-id">{editingId}</span>}
-          </div>
+      {filteredPlanning.map((item) => (
+        <div
+          key={item.id}
+          style={{
+            ...cardStyle,
+            borderLeft: `8px solid ${getStatusColor(item.status)}`,
+          }}
+        >
+          <p>
+            <strong>Datum:</strong> {item.datum} |{" "}
+            <strong>Opdrachtgever:</strong> {item.opdrachtgever} |{" "}
+            <strong>Medewerker 1:</strong> {item.medewerker1} |{" "}
+            <strong>Medewerker 2:</strong> {item.medewerker2} |{" "}
+            <strong>Status:</strong> {item.status}
+          </p>
 
-          <label>Datum</label>
-          <input
-            name="datum"
-            type="date"
-            value={formData.datum}
-            onChange={handleChange}
-            required
-          />
-
-          <label>Tijd</label>
-          <input
-            name="tijd"
-            type="text"
-            placeholder="Bijv. 09:30"
-            value={formData.tijd}
-            onChange={handleChange}
-            required
-          />
-
-          <label>Opdrachtgever</label>
-          <input
-            name="opdrachtgever"
-            placeholder="Bijv. Walpot"
-            value={formData.opdrachtgever}
-            onChange={handleChange}
-            required
-          />
-
-          <label>Locatie</label>
-          <input
-            name="locatie"
-            placeholder="Plaats of adres"
-            value={formData.locatie}
-            onChange={handleChange}
-          />
-
-          <label>Medewerker 1</label>
-          <select
-            name="medewerker1"
-            value={formData.medewerker1}
-            onChange={handleChange}
-            required
-          >
-            <option value="" disabled>
-              Kies medewerker
-            </option>
-            {medewerkers.map((naam) => (
-              <option key={naam} value={naam}>
-                {naam}
-              </option>
-            ))}
-          </select>
-
-          <label>Medewerker 2</label>
-          <select
-            name="medewerker2"
-            value={formData.medewerker2}
-            onChange={handleChange}
-          >
-            <option value="">Geen tweede medewerker</option>
-            {medewerkers.map((naam) => (
-              <option key={naam} value={naam}>
-                {naam}
-              </option>
-            ))}
-          </select>
-
-          <label>Status</label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-          >
-            <option value="Gepland">Gepland</option>
-            <option value="Uitgevoerd">Uitgevoerd</option>
-            <option value="Vervallen">Vervallen</option>
-          </select>
-
-          <label>Opmerkingen</label>
-          <textarea
-            name="opmerkingen"
-            placeholder="Aanvullende informatie"
-            value={formData.opmerkingen}
-            onChange={handleChange}
-          />
-
-          <button type="submit" disabled={loading}>
-            {loading
-              ? "Opslaan..."
-              : editingId
-              ? "Wijziging opslaan"
-              : "Planning opslaan"}
-          </button>
-
-          {editingId && (
-            <button type="button" className="cancel-button" onClick={resetForm}>
-              Annuleren
-            </button>
-          )}
-
-          {status && <p className="status">{status}</p>}
-        </form>
-
-        <section className="card">
-          <div className="header-row">
-            <h2>Planningsoverzicht</h2>
-
-            <select
-              value={medewerkerFilter}
-              onChange={(event) => setMedewerkerFilter(event.target.value)}
-              className="filter-select"
+          <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+            <button
+              type="button"
+              className="edit-button"
+              onClick={() => handleEdit(item)}
             >
-              <option value="">Alle medewerkers</option>
-              {medewerkers.map((naam) => (
-                <option key={naam} value={naam}>
-                  {naam}
-                </option>
-              ))}
-            </select>
+              Bewerken
+            </button>
 
-            <button type="button" onClick={loadPlanning}>
-              Verversen
+            <button
+              type="button"
+              className="workbon-button"
+              onClick={() => {
+                const params = new URLSearchParams({
+                  datum: toInputDate(item.datum),
+                  opdrachtgever: item.opdrachtgever || "",
+                  medewerker1: item.medewerker1 || "",
+                  medewerker2: item.medewerker2 || "",
+                  locatie: item.locatie || "",
+                  planningId: item.id || "",
+                });
+
+                window.open(`${WERKBON_URL}?${params.toString()}`, "_blank");
+              }}
+            >
+              Werkbon starten
             </button>
           </div>
-
-          {filteredPlanning.length === 0 ? (
-            <p className="muted">Er staan geen geplande opdrachten voor deze selectie.</p>
-          ) : (
-            <div className="planning-list">
-              {filteredPlanning.map((item) => (
-                <article className="planning-item" key={item.id}>
-                  <div className="planning-top">
-                    <div>
-                      <strong>
-                        {formatDate(item.datum)} om {formatTime(item.tijd)}
-                      </strong>
-                      <div className="planning-id">{item.id}</div>
-                    </div>
-
-                    <span className={`badge ${String(item.status || "Gepland").toLowerCase()}`}>
-                      {item.status || "Gepland"}
-                    </span>
-                  </div>
-
-                  <p><b>Opdrachtgever:</b> {item.opdrachtgever || "-"}</p>
-                  <p><b>Locatie:</b> {item.locatie || "-"}</p>
-                  <p>
-                    <b>Medewerkers:</b>{" "}
-                    {[item.medewerker1, item.medewerker2].filter(Boolean).join(" & ") || "-"}
-                  </p>
-
-                  {item.opmerkingen && (
-                    <p><b>Opmerkingen:</b> {item.opmerkingen}</p>
-                  )}
-
-<div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-  <button
-    type="button"
-    className="edit-button"
-    .workbon-button {
-  background: #16a34a;
-}
-    onClick={() => handleEdit(item)}
-  >
-    Bewerken
-  </button>
-
-  <button
-    type="button"
-    className="workbon-button"
-    onClick={() => {
-      const params = new URLSearchParams({
-        datum: toInputDate(item.datum),
-        opdrachtgever: item.opdrachtgever || "",
-        medewerker1: item.medewerker1 || "",
-        medewerker2: item.medewerker2 || "",
-        locatie: item.locatie || "",
-        planningId: item.id || "",
-      });
-
-      window.open(
-        `${WERKBON_URL}?${params.toString()}`,
-        "_blank"
-      );
-    }}
-  >
-    Werkbon starten
-  </button>
-</div>
-                </article>
-              ))}
-            </div>
-          )}
-        </section>
-      </section>
+        </div>
+      ))}
     </main>
   );
 }
 
-function toInputDate(value) {
-  if (!value) return "";
+const pageStyle = {
+  padding: "20px",
+  fontFamily: "Arial, sans-serif",
+  background: "#f2f2f2",
+  minHeight: "100vh",
+};
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
+const cardStyle = {
+  background: "#fff",
+  padding: "20px",
+  borderRadius: "12px",
+  marginBottom: "16px",
+  boxShadow: "0 5px 15px rgba(0,0,0,0.1)",
+};
 
-  return date.toISOString().slice(0, 10);
-}
+const filterStyle = {
+  width: "100%",
+  padding: "12px",
+  borderRadius: "8px",
+  border: "1px solid #ccc",
+  marginBottom: "16px",
+};
 
-function formatDate(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString("nl-NL");
-}
+const buttonStyle = {
+  padding: "12px 20px",
+  border: "none",
+  borderRadius: "8px",
+  cursor: "pointer",
+  fontWeight: "bold",
+};
 
-function formatTime(value) {
-  if (!value) return "-";
-  const date = new Date(value);
-  if (!Number.isNaN(date.getTime()) && String(value).includes("T")) {
-    return date.toLocaleTimeString("nl-NL", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  }
-  return value;
-}
+const editButtonStyle = {
+  ...buttonStyle,
+  background: "#2563eb",
+  color: "#fff",
+};
 
-const styles = `
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, sans-serif; background: #f4f1eb; color: #1f2933; }
-  main { min-height: 100vh; }
-
-  .hero {
-    background: #111827;
-    color: white;
-    padding: 70px 24px;
-  }
-
-  .hero div {
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  .eyebrow {
-    text-transform: uppercase;
-    letter-spacing: 4px;
-    color: #cbd5e1;
-    font-size: 13px;
-  }
-
-  h1 {
-    font-size: clamp(3rem, 8vw, 6rem);
-    margin: 10px 0;
-  }
-
-  .hero p:last-child {
-    color: #d7e1e8;
-    font-size: 20px;
-  }
-
-  .layout {
-    max-width: 1200px;
-    margin: -40px auto 80px;
-    padding: 0 24px;
-    display: grid;
-    grid-template-columns: minmax(300px, 420px) 1fr;
-    gap: 24px;
-    align-items: start;
-  }
-
-  .card {
-    background: white;
-    border-radius: 28px;
-    padding: 32px;
-    box-shadow: 0 18px 50px rgba(15, 23, 42, 0.10);
-  }
-
-  .form-title-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-  }
-
-  .edit-id {
-    background: #eef2ff;
-    color: #3730a3;
-    border-radius: 999px;
-    padding: 7px 12px;
-    font-size: 13px;
-    font-weight: bold;
-  }
-
-  label {
-    display: block;
-    margin-top: 16px;
-    margin-bottom: 6px;
-    font-weight: bold;
-  }
-
-  input, select, textarea {
-    width: 100%;
-    padding: 16px;
-    border-radius: 14px;
-    border: 1px solid rgba(31,41,51,.18);
-    font-size: 16px;
-  }
-
-  textarea {
-    min-height: 110px;
-  }
-
-  button {
-    background: #1f2933;
-    color: white;
-    border: none;
-    border-radius: 999px;
-    padding: 15px 24px;
-    font-weight: bold;
-    cursor: pointer;
-  }
-
-  form button {
-    width: 100%;
-    margin-top: 24px;
-    padding: 18px;
-  }
-
-  .cancel-button {
-    background: #6b7280;
-    margin-top: 12px;
-  }
-
-  .status {
-    background: #d1fae5;
-    color: #065f46;
-    padding: 14px;
-    border-radius: 14px;
-    text-align: center;
-    font-weight: bold;
-  }
-
-  .header-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .filter-select {
-    max-width: 240px;
-  }
-
-  .muted {
-    color: #6b7280;
-  }
-
-  .planning-list {
-    display: grid;
-    gap: 14px;
-    margin-top: 20px;
-  }
-
-  .planning-item {
-    background: #f8fafc;
-    border: 1px solid rgba(31,41,51,.08);
-    border-radius: 20px;
-    padding: 20px;
-  }
-
-  .planning-top {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    align-items: center;
-    margin-bottom: 14px;
-  }
-
-  .planning-id {
-    font-size: 12px;
-    color: #666;
-    margin-top: 4px;
-  }
-
-  .badge {
-    padding: 7px 12px;
-    border-radius: 999px;
-    font-size: 13px;
-    font-weight: bold;
-    background: #dbeafe;
-    color: #1e40af;
-  }
-
-  .badge.gepland {
-    background: #dbeafe;
-    color: #1e40af;
-  }
-
-  .badge.uitgevoerd {
-    background: #dcfce7;
-    color: #166534;
-  }
-
-  .badge.vervallen {
-    background: #fee2e2;
-    color: #991b1b;
-  }
-
-  .edit-button {
-    margin-top: 12px;
-    background: #2563eb;
-  }
-
-  @media (max-width: 850px) {
-    .layout {
-      grid-template-columns: 1fr;
-      margin-top: -20px;
-    }
-
-    .card {
-      padding: 24px;
-    }
-
-    .planning-top {
-      align-items: flex-start;
-      flex-direction: column;
-    }
-
-    .filter-select {
-      max-width: 100%;
-    }
-  }
-`;
+const workbonButtonStyle = {
+  ...buttonStyle,
+  background: "#16a34a",
+  color: "#fff",
+};
