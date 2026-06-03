@@ -163,9 +163,9 @@ export default function App() {
                 <article className="planning-item" key={item.id}>
                   <div className="planning-top">
                     <strong>{formatDate(item.datum)} om {formatTime(item.tijd)}</strong>
-                    <span className={`badge ${item.status?.toLowerCase()}`}>
-                      {item.status || "Gepland"}
-                    </span>
+<span className={`badge ${String(item.status || "Gepland").toLowerCase()}`}>
+  {item.status || "Gepland"}
+</span>
                   </div>
 
                   <p><b>Opdrachtgever:</b> {item.opdrachtgever || "-"}</p>
